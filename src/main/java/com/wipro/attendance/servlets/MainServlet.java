@@ -5,9 +5,12 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
 
-import jakarta.servlet.*;
+import jakarta.servlet.RequestDispatcher;
+import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
-import jakarta.servlet.http.*;
+import jakarta.servlet.http.HttpServlet;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 
 import com.wipro.attendance.bean.AttendanceBean;
 import com.wipro.attendance.service.Administrator;
@@ -15,12 +18,24 @@ import com.wipro.attendance.service.Administrator;
 @WebServlet("/MainServlet")
 public class MainServlet extends HttpServlet {
 
-    Administrator admin = new Administrator();
+    private static final long serialVersionUID = 1L;
+    private final Administrator admin = new Administrator();
 
+    @Override
+    protected void doGet(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
+        doPost(request, response);
+    }
+
+    @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
 
         String operation = request.getParameter("operation");
+        if (operation == null || operation.isBlank()) {
+            response.sendRedirect("error.html");
+            return;
+        }
 
         try {
 
@@ -41,10 +56,11 @@ public class MainServlet extends HttpServlet {
 
                 String result = admin.addRecord(bean);
 
-                if (result.equals("FAIL") || result.equals("INVALID INPUT"))
+                if (isFailureResult(result)) {
                     response.sendRedirect("error.html");
-                else
+                } else {
                     response.sendRedirect("success.html");
+                }
             }
 
             else if (operation.equals("viewRecord")) {
@@ -67,10 +83,22 @@ public class MainServlet extends HttpServlet {
                 request.setAttribute("records", list);
                 RequestDispatcher rd = request.getRequestDispatcher("displayAllAttendance.jsp");
                 rd.forward(request, response);
+            } else {
+                response.sendRedirect("error.html");
             }
 
         } catch (Exception e) {
             response.sendRedirect("error.html");
         }
+    }
+
+    private boolean isFailureResult(String result) {
+        return result == null
+                || result.isBlank()
+                || result.equals("FAIL")
+                || result.equals("INVALID INPUT")
+                || result.equals("INVALID NAME")
+                || result.equals("INVALID STATUS")
+                || result.equals("ALREADY EXISTS");
     }
 }

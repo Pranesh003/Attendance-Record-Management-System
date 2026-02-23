@@ -1,11 +1,13 @@
 package com.wipro.attendance.dao;
 
-import java.sql.*;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.Statement;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.List;
 import java.util.Date;
-
+import java.util.List;
 
 import com.wipro.attendance.bean.AttendanceBean;
 import com.wipro.attendance.util.DBUtil;
@@ -14,11 +16,10 @@ public class AttendanceDAO {
 
     public String createRecord(AttendanceBean bean) {
         String result = "FAIL";
-        try {
-            Connection con = DBUtil.getDBConnection();
+        String sql = "INSERT INTO ATTENDANCE_TB VALUES (?, ?, ?, ?, ?)";
 
-            String sql = "INSERT INTO ATTENDANCE_TB VALUES (?, ?, ?, ?, ?)";
-            PreparedStatement ps = con.prepareStatement(sql);
+        try (Connection con = DBUtil.getDBConnection();
+             PreparedStatement ps = con.prepareStatement(sql)) {
 
             ps.setString(1, bean.getRecordId());
             ps.setString(2, bean.getPersonName());
@@ -27,8 +28,9 @@ public class AttendanceDAO {
             ps.setString(5, bean.getRemarks());
 
             int row = ps.executeUpdate();
-            if (row > 0)
+            if (row > 0) {
                 result = bean.getRecordId();
+            }
 
         } catch (Exception e) {
             e.printStackTrace();
@@ -38,22 +40,23 @@ public class AttendanceDAO {
 
     public AttendanceBean fetchRecord(String personName, Date attendanceDate) {
         AttendanceBean bean = null;
-        try {
-            Connection con = DBUtil.getDBConnection();
+        String sql = "SELECT RECORDID, PERSONNAME, ATTENDANCE_DATE, STATUS, REMARKS FROM ATTENDANCE_TB WHERE PERSONNAME=? AND ATTENDANCE_DATE=?";
 
-            String sql = "SELECT * FROM ATTENDANCE_TB WHERE PERSONNAME=? AND ATTENDANCE_DATE=?";
-            PreparedStatement ps = con.prepareStatement(sql);
+        try (Connection con = DBUtil.getDBConnection();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+
             ps.setString(1, personName);
             ps.setDate(2, new java.sql.Date(attendanceDate.getTime()));
 
-            ResultSet rs = ps.executeQuery();
-            if (rs.next()) {
-                bean = new AttendanceBean();
-                bean.setRecordId(rs.getString("RECORDID"));
-                bean.setPersonName(rs.getString("PERSONNAME"));
-                bean.setAttendanceDate(rs.getDate("ATTENDANCE_DATE"));
-                bean.setStatus(rs.getString("STATUS"));
-                bean.setRemarks(rs.getString("REMARKS"));
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    bean = new AttendanceBean();
+                    bean.setRecordId(rs.getString("RECORDID"));
+                    bean.setPersonName(rs.getString("PERSONNAME"));
+                    bean.setAttendanceDate(rs.getDate("ATTENDANCE_DATE"));
+                    bean.setStatus(rs.getString("STATUS"));
+                    bean.setRemarks(rs.getString("REMARKS"));
+                }
             }
 
         } catch (Exception e) {
@@ -68,11 +71,11 @@ public class AttendanceDAO {
 
     public List<AttendanceBean> fetchAllRecords() {
         List<AttendanceBean> list = new ArrayList<>();
-        try {
-            Connection con = DBUtil.getDBConnection();
-            String sql = "SELECT * FROM ATTENDANCE_TB";
-            PreparedStatement ps = con.prepareStatement(sql);
-            ResultSet rs = ps.executeQuery();
+        String sql = "SELECT RECORDID, PERSONNAME, ATTENDANCE_DATE, STATUS, REMARKS FROM ATTENDANCE_TB";
+
+        try (Connection con = DBUtil.getDBConnection();
+             PreparedStatement ps = con.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
 
             while (rs.next()) {
                 AttendanceBean bean = new AttendanceBean();
@@ -92,10 +95,11 @@ public class AttendanceDAO {
 
     public String generateRecordID(String personName, Date attendanceDate) {
         String id = "";
-        try {
-            Connection con = DBUtil.getDBConnection();
-            Statement st = con.createStatement();
-            ResultSet rs = st.executeQuery("SELECT ATTENDANCE_SEQ.NEXTVAL FROM DUAL");
+
+        try (Connection con = DBUtil.getDBConnection();
+             Statement st = con.createStatement();
+             ResultSet rs = st.executeQuery("SELECT ATTENDANCE_SEQ.NEXTVAL FROM DUAL")) {
+
             rs.next();
             int seq = rs.getInt(1);
 
